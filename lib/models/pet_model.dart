@@ -65,6 +65,33 @@ class PetModel {
     checkLoss();
   }
 
+  void run() {
+    if (gameOver || hasWon) {
+      return;
+    }
+
+    if (energy < 20) {
+      return;
+    }
+
+    happiness = clampMeter(happiness + 15);
+    hunger = clampMeter(hunger + 10);
+    energy = clampMeter(energy - 20);
+
+    checkLoss();
+  }
+
+  void sleep() {
+    if (gameOver || hasWon) {
+      return;
+    }
+
+    energy = clampMeter(energy + 30);
+    hunger = clampMeter(hunger + 10);
+
+    checkLoss();
+  }
+
   void increaseHunger() {
     if (gameOver || hasWon) {
       return;
