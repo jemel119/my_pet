@@ -295,6 +295,11 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
+              const SizedBox(height: 8),
+              Text(
+                _pet.message,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 24),
               TextField(
                 controller: _nameController,

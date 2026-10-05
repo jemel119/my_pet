@@ -31,6 +31,34 @@ class PetModel {
     return 'Unhappy';
   }
 
+  String get message {
+  if (gameOver) {
+    return '$name needs a fresh start.';
+  }
+
+  if (hasWon) {
+    return '$name is thriving!';
+  }
+
+  if (hunger >= 80) {
+    return '$name is very hungry.';
+  }
+
+  if (energy <= 20) {
+    return '$name needs some rest.';
+  }
+
+  if (happiness > 70) {
+    return '$name is feeling great!';
+  }
+
+  if (happiness < 30) {
+    return '$name needs some attention.';
+  }
+
+  return '$name is doing okay.';
+}
+
   void setName(String newName) {
     final trimmedName = newName.trim();
 
