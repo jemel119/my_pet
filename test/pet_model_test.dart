@@ -361,4 +361,71 @@ void main() {
       expect(pet.hasWon, false);
     });
   });
+  group('PetModel derived messages', () {
+  test('shows a neutral message for the initial state', () {
+    final pet = PetModel();
+
+    expect(pet.message, 'Pip is doing okay.');
+  });
+
+  test('shows a hungry message when hunger is high', () {
+    final pet = PetModel(
+      hunger: 80,
+    );
+
+    expect(pet.message, 'Pip is very hungry.');
+  });
+
+  test('shows a rest message when energy is low', () {
+    final pet = PetModel(
+      hunger: 50,
+      energy: 20,
+    );
+
+    expect(pet.message, 'Pip needs some rest.');
+  });
+
+  test('shows a happy message when happiness is above 70', () {
+    final pet = PetModel(
+      happiness: 71,
+    );
+
+    expect(pet.message, 'Pip is feeling great!');
+  });
+
+  test('shows an attention message when happiness is below 30', () {
+    final pet = PetModel(
+      happiness: 29,
+    );
+
+    expect(pet.message, 'Pip needs some attention.');
+  });
+
+  test('game over message takes priority', () {
+    final pet = PetModel(
+      happiness: 5,
+      hunger: 100,
+      gameOver: true,
+    );
+
+    expect(pet.message, 'Pip needs a fresh start.');
+  });
+
+  test('win message takes priority when the pet has won', () {
+    final pet = PetModel(
+      happiness: 90,
+      hasWon: true,
+    );
+
+    expect(pet.message, 'Pip is thriving!');
+  });
+
+  test('message uses the confirmed pet name', () {
+    final pet = PetModel();
+
+    pet.setName('Buddy');
+
+    expect(pet.message, 'Buddy is doing okay.');
+  });
+});
 }
