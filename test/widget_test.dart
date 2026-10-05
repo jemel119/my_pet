@@ -8,7 +8,7 @@ void main() {
     await tester.pumpWidget(const DigitalPetApp());
 
     expect(find.text('Digital Pet'), findsOneWidget);
-    expect(find.text('Pip'), findsOneWidget);
+    expect(find.text('Pip'), findsNWidgets(2));
     expect(find.text('Mood: Neutral'), findsOneWidget);
 
     expect(find.text('Happiness: 50'), findsOneWidget);
@@ -36,16 +36,16 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('Buddy'), findsOneWidget);
+    expect(find.text('Buddy'), findsNWidgets(2));
   });
 
   testWidgets('feed updates the visible pet meters', (tester) async {
     await tester.pumpWidget(const DigitalPetApp());
 
-    await tester.tap(
-      find.text('Feed'),
-    );
+    final feedButton = find.text('Feed');
 
+    await tester.ensureVisible(feedButton);
+    await tester.tap(feedButton);
     await tester.pump();
 
     expect(find.text('Happiness: 60'), findsOneWidget);
@@ -55,10 +55,10 @@ void main() {
   testWidgets('play updates happiness hunger and energy', (tester) async {
     await tester.pumpWidget(const DigitalPetApp());
 
-    await tester.tap(
-      find.text('Play'),
-    );
+    final playButton = find.text('Play');
 
+    await tester.ensureVisible(playButton);
+    await tester.tap(playButton);
     await tester.pump();
 
     expect(find.text('Happiness: 60'), findsOneWidget);
@@ -69,10 +69,10 @@ void main() {
   testWidgets('run activity updates the visible meters', (tester) async {
     await tester.pumpWidget(const DigitalPetApp());
 
-    await tester.tap(
-      find.text('Run'),
-    );
+    final runButton = find.text('Run');
 
+    await tester.ensureVisible(runButton);
+    await tester.tap(runButton);
     await tester.pump();
 
     expect(find.text('Happiness: 65'), findsOneWidget);
@@ -83,10 +83,10 @@ void main() {
   testWidgets('sleep activity restores energy', (tester) async {
     await tester.pumpWidget(const DigitalPetApp());
 
-    await tester.tap(
-      find.text('Sleep'),
-    );
+    final sleepButton = find.text('Sleep');
 
+    await tester.ensureVisible(sleepButton);
+    await tester.tap(sleepButton);
     await tester.pump();
 
     expect(find.text('Hunger: 60'), findsOneWidget);
@@ -96,16 +96,18 @@ void main() {
   testWidgets('reset restores the initial meter values', (tester) async {
     await tester.pumpWidget(const DigitalPetApp());
 
-    await tester.tap(
-      find.text('Play'),
-    );
+    final playButton = find.text('Play');
 
+    await tester.ensureVisible(playButton);
+    await tester.tap(playButton);
     await tester.pump();
 
-    await tester.tap(
-      find.text('Reset Pet'),
-    );
+    expect(find.text('Happiness: 60'), findsOneWidget);
 
+    final resetButton = find.text('Reset Pet');
+
+    await tester.ensureVisible(resetButton);
+    await tester.tap(resetButton);
     await tester.pump();
 
     expect(find.text('Happiness: 50'), findsOneWidget);
