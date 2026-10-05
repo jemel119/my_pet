@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'models/pet_model.dart';
@@ -36,6 +38,9 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
   final PetModel _pet = PetModel();
   final TextEditingController _nameController = TextEditingController();
 
+  Timer? _hungerTimer;
+  Timer? _highMoodTimer;
+
   Color get _moodColor {
     if (_pet.happiness > 70) {
       return Colors.green;
@@ -46,6 +51,61 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
     }
 
     return Colors.red;
+  }
+
+  void _startHungerTimer() {
+    _hungerTimer?.cancel();
+
+    _hungerTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (timer) {
+        if (!mounted || _pet.gameOver || _pet.hasWon) {
+          timer.cancel();
+          return;
+        }
+
+        setState(() {
+          _pet.increaseHunger();
+        });
+
+        _updateOutcome();
+      },
+    );
+  }
+
+  void _updateOutcome() {
+    if (_pet.gameOver || _pet.hasWon) {
+      _highMoodTimer?.cancel();
+      _highMoodTimer = null;
+      _hungerTimer?.cancel();
+      return;
+    }
+
+    if (_pet.happiness <= 80) {
+      _highMoodTimer?.cancel();
+      _highMoodTimer = null;
+      return;
+    }
+
+    _highMoodTimer ??= Timer(
+      const Duration(minutes: 3),
+      () {
+        _highMoodTimer = null;
+
+        if (!mounted ||
+            _pet.gameOver ||
+            _pet.hasWon ||
+            _pet.happiness <= 80) {
+          return;
+        }
+
+        setState(() {
+          _pet.markWon();
+        });
+
+        _hungerTimer?.cancel();
+      },
+    );
   }
 
   void _updatePetName() {
@@ -59,40 +119,56 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
     setState(() {
       _pet.feed();
     });
+
+    _updateOutcome();
   }
 
   void _playWithPet() {
     setState(() {
       _pet.play();
     });
+
+    _updateOutcome();
   }
 
   void _runWithPet() {
     setState(() {
       _pet.run();
     });
+
+    _updateOutcome();
   }
 
   void _letPetSleep() {
     setState(() {
       _pet.sleep();
     });
+
+    _updateOutcome();
   }
 
   void _resetPet() {
+    _highMoodTimer?.cancel();
+    _highMoodTimer = null;
+
     setState(() {
       _pet.reset();
     });
+
+    _startHungerTimer();
   }
 
   @override
   void initState() {
     super.initState();
     _nameController.text = _pet.name;
+    _startHungerTimer();
   }
 
   @override
   void dispose() {
+    _hungerTimer?.cancel();
+    _highMoodTimer?.cancel();
     _nameController.dispose();
     super.dispose();
   }
