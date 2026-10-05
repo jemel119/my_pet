@@ -200,10 +200,11 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
                     _moodColor,
                     BlendMode.modulate,
                   ),
-                  child: const Icon(
-                    Icons.pets,
-                    size: 120,
-                    color: Colors.white,
+                  child: Image.asset(
+                    'assets/images/pet.png',
+                    width: 180,
+                    height: 180,
+                    fit: BoxFit.contain,
                     semanticLabel: 'Digital pet',
                   ),
                 ),
