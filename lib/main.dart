@@ -40,6 +40,10 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
 
   Timer? _hungerTimer;
   Timer? _highMoodTimer;
+  Timer? _bounceTimer;
+
+  bool _isBouncing = false;
+  int _bounceId = 0;
 
   Color get _moodColor {
     if (_pet.happiness > 70) {
@@ -51,6 +55,18 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
     }
 
     return Colors.red;
+  }
+
+  bool get _reduceMotion {
+    return MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+  }
+
+  Duration get _motionDuration {
+    if (_reduceMotion) {
+      return Duration.zero;
+    }
+
+    return const Duration(milliseconds: 250);
   }
 
   void _startHungerTimer() {
@@ -108,6 +124,38 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
     );
   }
 
+  void _triggerBounce() {
+    _bounceTimer?.cancel();
+    _bounceId++;
+    final currentBounceId = _bounceId;
+
+    if (_reduceMotion) {
+      if (_isBouncing) {
+        setState(() {
+          _isBouncing = false;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _isBouncing = true;
+    });
+
+    _bounceTimer = Timer(
+      const Duration(milliseconds: 180),
+      () {
+        if (!mounted || currentBounceId != _bounceId) {
+          return;
+        }
+
+        setState(() {
+          _isBouncing = false;
+        });
+      },
+    );
+  }
+
   void _updatePetName() {
     setState(() {
       _pet.setName(_nameController.text);
@@ -120,6 +168,7 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
       _pet.feed();
     });
 
+    _triggerBounce();
     _updateOutcome();
   }
 
@@ -128,6 +177,7 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
       _pet.play();
     });
 
+    _triggerBounce();
     _updateOutcome();
   }
 
@@ -136,6 +186,7 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
       _pet.run();
     });
 
+    _triggerBounce();
     _updateOutcome();
   }
 
@@ -144,6 +195,7 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
       _pet.sleep();
     });
 
+    _triggerBounce();
     _updateOutcome();
   }
 
@@ -151,7 +203,12 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
     _highMoodTimer?.cancel();
     _highMoodTimer = null;
 
+    _bounceTimer?.cancel();
+    _bounceTimer = null;
+    _bounceId++;
+
     setState(() {
+      _isBouncing = false;
       _pet.reset();
     });
 
@@ -169,6 +226,7 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
   void dispose() {
     _hungerTimer?.cancel();
     _highMoodTimer?.cancel();
+    _bounceTimer?.cancel();
     _nameController.dispose();
     super.dispose();
   }
@@ -195,17 +253,21 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
               ),
               const SizedBox(height: 16),
               Center(
-                child: ColorFiltered(
-                  colorFilter: ColorFilter.mode(
-                    _moodColor,
-                    BlendMode.modulate,
-                  ),
-                  child: Image.asset(
-                    'assets/images/pet.png',
-                    width: 180,
-                    height: 180,
-                    fit: BoxFit.contain,
-                    semanticLabel: 'Digital pet',
+                child: AnimatedScale(
+                  scale: _isBouncing ? 1.08 : 1.0,
+                  duration: _motionDuration,
+                  child: ColorFiltered(
+                    colorFilter: ColorFilter.mode(
+                      _moodColor,
+                      BlendMode.modulate,
+                    ),
+                    child: Image.asset(
+                      'assets/images/pet.png',
+                      width: 180,
+                      height: 180,
+                      fit: BoxFit.contain,
+                      semanticLabel: 'Digital pet',
+                    ),
                   ),
                 ),
               ),
@@ -233,16 +295,19 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
               _PetMeter(
                 label: 'Happiness',
                 value: _pet.happiness,
+                reduceMotion: _reduceMotion,
               ),
               const SizedBox(height: 16),
               _PetMeter(
                 label: 'Hunger',
                 value: _pet.hunger,
+                reduceMotion: _reduceMotion,
               ),
               const SizedBox(height: 16),
               _PetMeter(
                 label: 'Energy',
                 value: _pet.energy,
+                reduceMotion: _reduceMotion,
               ),
               const SizedBox(height: 24),
               Text(
@@ -321,10 +386,12 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
 class _PetMeter extends StatelessWidget {
   final String label;
   final int value;
+  final bool reduceMotion;
 
   const _PetMeter({
     required this.label,
     required this.value,
+    required this.reduceMotion,
   });
 
   @override
@@ -339,9 +406,19 @@ class _PetMeter extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 6),
-          LinearProgressIndicator(
-            value: value / 100,
-            minHeight: 12,
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(
+              end: value / 100,
+            ),
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 300),
+            builder: (context, animatedValue, child) {
+              return LinearProgressIndicator(
+                value: animatedValue,
+                minHeight: 12,
+              );
+            },
           ),
         ],
       ),
