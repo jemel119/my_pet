@@ -1,8 +1,7 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-
 import 'models/pet_model.dart';
+import 'models/win_tracker.dart';
 
 void main() {
   runApp(const DigitalPetApp());
@@ -36,6 +35,7 @@ class DigitalPetScreen extends StatefulWidget {
 
 class _DigitalPetScreenState extends State<DigitalPetScreen> {
   final PetModel _pet = PetModel();
+  final WinTracker _winTracker = WinTracker();
   final TextEditingController _nameController = TextEditingController();
 
   Timer? _hungerTimer;
@@ -90,39 +90,55 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
   }
 
   void _updateOutcome() {
-    if (_pet.gameOver || _pet.hasWon) {
-      _highMoodTimer?.cancel();
+  if (_pet.gameOver || _pet.hasWon) {
+    _highMoodTimer?.cancel();
+    _highMoodTimer = null;
+    _winTracker.reset();
+    _hungerTimer?.cancel();
+    return;
+  }
+
+  if (_pet.happiness <= 80) {
+    _highMoodTimer?.cancel();
+    _highMoodTimer = null;
+    _winTracker.reset();
+    return;
+  }
+
+  if (_highMoodTimer != null) {
+    return;
+  }
+
+  _winTracker.reset();
+
+  _highMoodTimer = Timer(
+    WinTracker.requiredDuration,
+    () {
       _highMoodTimer = null;
-      _hungerTimer?.cancel();
-      return;
-    }
 
-    if (_pet.happiness <= 80) {
-      _highMoodTimer?.cancel();
-      _highMoodTimer = null;
-      return;
-    }
+      if (!mounted ||
+          _pet.gameOver ||
+          _pet.hasWon ||
+          _pet.happiness <= 80) {
+        _winTracker.reset();
+        return;
+      }
 
-    _highMoodTimer ??= Timer(
-      const Duration(minutes: 3),
-      () {
-        _highMoodTimer = null;
+      final won = _winTracker.update(
+        happiness: _pet.happiness,
+        elapsed: WinTracker.requiredDuration,
+      );
 
-        if (!mounted ||
-            _pet.gameOver ||
-            _pet.hasWon ||
-            _pet.happiness <= 80) {
-          return;
-        }
-
+      if (won) {
         setState(() {
           _pet.markWon();
         });
 
         _hungerTimer?.cancel();
-      },
-    );
-  }
+      }
+    },
+  );
+}
 
   void _triggerBounce() {
     _bounceTimer?.cancel();
@@ -200,20 +216,21 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
   }
 
   void _resetPet() {
-    _highMoodTimer?.cancel();
-    _highMoodTimer = null;
+  _highMoodTimer?.cancel();
+  _highMoodTimer = null;
+  _winTracker.reset();
 
-    _bounceTimer?.cancel();
-    _bounceTimer = null;
-    _bounceId++;
+  _bounceTimer?.cancel();
+  _bounceTimer = null;
+  _bounceId++;
 
-    setState(() {
-      _isBouncing = false;
-      _pet.reset();
-    });
+  setState(() {
+    _isBouncing = false;
+    _pet.reset();
+  });
 
-    _startHungerTimer();
-  }
+  _startHungerTimer();
+}
 
   @override
   void initState() {
@@ -227,9 +244,10 @@ class _DigitalPetScreenState extends State<DigitalPetScreen> {
     _hungerTimer?.cancel();
     _highMoodTimer?.cancel();
     _bounceTimer?.cancel();
+    _winTracker.reset();
     _nameController.dispose();
     super.dispose();
-  }
+}
 
   @override
   Widget build(BuildContext context) {
