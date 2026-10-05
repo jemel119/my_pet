@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:digital_pet/models/pet_model.dart';
 
 void main() {
-  group('PetModel', () {
+  group('PetModel initial state', () {
     test('starts with the correct default values', () {
       final pet = PetModel();
 
@@ -29,7 +29,9 @@ void main() {
 
       expect(pet.name, 'Pip');
     });
+  });
 
+  group('PetModel feed behavior', () {
     test('feed lowers hunger and increases happiness', () {
       final pet = PetModel();
 
@@ -39,18 +41,44 @@ void main() {
       expect(pet.happiness, 60);
     });
 
-    test('feed keeps values inside their boundaries', () {
+    test('feed clamps hunger at zero', () {
       final pet = PetModel(
-        happiness: 95,
+        happiness: 50,
         hunger: 5,
       );
 
       pet.feed();
 
       expect(pet.hunger, 0);
-      expect(pet.happiness, 75);
+      expect(pet.happiness, 30);
     });
 
+    test('feed at high hunger applies the resulting hunger rule', () {
+      final pet = PetModel(
+        happiness: 50,
+        hunger: 95,
+      );
+
+      pet.feed();
+
+      expect(pet.hunger, 85);
+      expect(pet.happiness, 60);
+    });
+
+    test('happiness never exceeds 100 after feeding', () {
+      final pet = PetModel(
+        happiness: 95,
+        hunger: 50,
+      );
+
+      pet.feed();
+
+      expect(pet.happiness, 100);
+      expect(pet.hunger, 40);
+    });
+  });
+
+  group('PetModel play and energy behavior', () {
     test('play updates happiness hunger and energy', () {
       final pet = PetModel();
 
@@ -61,6 +89,28 @@ void main() {
       expect(pet.energy, 60);
     });
 
+    test('play keeps happiness within 100', () {
+      final pet = PetModel(
+        happiness: 95,
+      );
+
+      pet.play();
+
+      expect(pet.happiness, 100);
+    });
+
+    test('play keeps energy within zero to 100', () {
+      final pet = PetModel(
+        energy: 5,
+      );
+
+      pet.play();
+
+      expect(pet.energy, 0);
+    });
+  });
+
+  group('PetModel activity selection', () {
     test('run updates meters when enough energy is available', () {
       final pet = PetModel();
 
@@ -72,7 +122,9 @@ void main() {
     });
 
     test('run does nothing when energy is too low', () {
-      final pet = PetModel(energy: 10);
+      final pet = PetModel(
+        energy: 10,
+      );
 
       pet.run();
 
@@ -81,15 +133,30 @@ void main() {
       expect(pet.energy, 10);
     });
 
-    test('sleep restores energy without exceeding 100', () {
-      final pet = PetModel(energy: 90);
+    test('sleep restores energy', () {
+      final pet = PetModel(
+        energy: 50,
+      );
+
+      pet.sleep();
+
+      expect(pet.energy, 80);
+      expect(pet.hunger, 60);
+    });
+
+    test('sleep does not allow energy above 100', () {
+      final pet = PetModel(
+        energy: 90,
+      );
 
       pet.sleep();
 
       expect(pet.energy, 100);
       expect(pet.hunger, 60);
     });
+  });
 
+  group('PetModel hunger timer behavior', () {
     test('hunger tick increases hunger by 5', () {
       final pet = PetModel();
 
@@ -98,7 +165,19 @@ void main() {
       expect(pet.hunger, 55);
     });
 
-    test('hunger overflow lowers happiness', () {
+    test('first tick from 95 reaches 100 without happiness penalty', () {
+      final pet = PetModel(
+        happiness: 50,
+        hunger: 95,
+      );
+
+      pet.increaseHunger();
+
+      expect(pet.hunger, 100);
+      expect(pet.happiness, 50);
+    });
+
+    test('tick beyond 100 lowers happiness by 20', () {
       final pet = PetModel(
         happiness: 50,
         hunger: 100,
@@ -110,9 +189,53 @@ void main() {
       expect(pet.happiness, 30);
     });
 
+    test('hunger penalty does not lower happiness below zero', () {
+      final pet = PetModel(
+        happiness: 15,
+        hunger: 100,
+      );
+
+      pet.increaseHunger();
+
+      expect(pet.hunger, 100);
+      expect(pet.happiness, 0);
+      expect(pet.gameOver, true);
+    });
+  });
+
+  group('PetModel mood boundaries', () {
+    test('29 happiness is unhappy', () {
+      expect(PetModel(happiness: 29).mood, 'Unhappy');
+    });
+
+    test('30 happiness is neutral', () {
+      expect(PetModel(happiness: 30).mood, 'Neutral');
+    });
+
+    test('70 happiness is neutral', () {
+      expect(PetModel(happiness: 70).mood, 'Neutral');
+    });
+
+    test('71 happiness is happy', () {
+      expect(PetModel(happiness: 71).mood, 'Happy');
+    });
+  });
+
+  group('PetModel outcomes', () {
     test('loss occurs at 100 hunger and 10 happiness', () {
       final pet = PetModel(
         happiness: 10,
+        hunger: 100,
+      );
+
+      pet.checkLoss();
+
+      expect(pet.gameOver, true);
+    });
+
+    test('loss occurs below 10 happiness at 100 hunger', () {
+      final pet = PetModel(
+        happiness: 5,
         hunger: 100,
       );
 
@@ -132,6 +255,17 @@ void main() {
       expect(pet.gameOver, false);
     });
 
+    test('loss does not occur when hunger is below 100', () {
+      final pet = PetModel(
+        happiness: 10,
+        hunger: 99,
+      );
+
+      pet.checkLoss();
+
+      expect(pet.gameOver, false);
+    });
+
     test('markWon records a win when game is active', () {
       final pet = PetModel();
 
@@ -140,13 +274,64 @@ void main() {
       expect(pet.hasWon, true);
     });
 
-    test('reset restores initial state', () {
+    test('markWon cannot override game over', () {
+      final pet = PetModel(
+        gameOver: true,
+      );
+
+      pet.markWon();
+
+      expect(pet.hasWon, false);
+    });
+
+    test('actions stop changing state after game over', () {
+      final pet = PetModel(
+        happiness: 10,
+        hunger: 100,
+        energy: 50,
+        gameOver: true,
+      );
+
+      pet.feed();
+      pet.play();
+      pet.run();
+      pet.sleep();
+      pet.increaseHunger();
+
+      expect(pet.happiness, 10);
+      expect(pet.hunger, 100);
+      expect(pet.energy, 50);
+    });
+
+    test('actions stop changing state after a win', () {
+      final pet = PetModel(
+        happiness: 90,
+        hunger: 50,
+        energy: 50,
+        hasWon: true,
+      );
+
+      pet.feed();
+      pet.play();
+      pet.run();
+      pet.sleep();
+      pet.increaseHunger();
+
+      expect(pet.happiness, 90);
+      expect(pet.hunger, 50);
+      expect(pet.energy, 50);
+    });
+  });
+
+  group('PetModel reset behavior', () {
+    test('reset restores meters and outcome flags', () {
       final pet = PetModel(
         name: 'Buddy',
         happiness: 10,
         hunger: 100,
         energy: 5,
         gameOver: true,
+        hasWon: false,
       );
 
       pet.reset();
@@ -159,11 +344,21 @@ void main() {
       expect(pet.hasWon, false);
     });
 
-    test('mood follows happiness boundaries', () {
-      expect(PetModel(happiness: 29).mood, 'Unhappy');
-      expect(PetModel(happiness: 30).mood, 'Neutral');
-      expect(PetModel(happiness: 70).mood, 'Neutral');
-      expect(PetModel(happiness: 71).mood, 'Happy');
+    test('reset clears a win', () {
+      final pet = PetModel(
+        happiness: 90,
+        hunger: 40,
+        energy: 80,
+        hasWon: true,
+      );
+
+      pet.reset();
+
+      expect(pet.happiness, 50);
+      expect(pet.hunger, 50);
+      expect(pet.energy, 70);
+      expect(pet.gameOver, false);
+      expect(pet.hasWon, false);
     });
   });
 }
